@@ -36,28 +36,29 @@ router.get('/:id', (req, res) => {
 
 router.post('/', (req, res) => {
   // create a new tag
+  Tag.create(req.body)
+    .then((tag) => {
+      
+    })
 });
 
 router.put('/:id', (req, res) => {
   // update a tag's name by its `id` value
   Tag.update(
     {
-      // All the fields you can update and the data attached to the request body.
       id: req.body.id,
       tag_name: req.body.tag_name,
     },
     {
-      // Gets the books based on the isbn given in the request parameters
       where: {
         id: req.params.id,
       },
     }
   )
-    .then((updatedBook) => {
-      // Sends the updated book as a json response
-      res.json(updatedBook);
+    .then((updatedTag) => {
+      res.status(200).json(updatedTag);
     })
-    .catch((err) => res.json(err));
+    .catch((err) => res.status(400).json({message: 'Unable to update tag!'}));
 });
 
 router.delete('/:id', (req, res) => {
