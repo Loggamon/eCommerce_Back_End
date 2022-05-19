@@ -38,7 +38,14 @@ router.post('/', (req, res) => {
   // create a new tag
   Tag.create(req.body)
     .then((tag) => {
-      
+      if (req.body.productIds.length) {
+        const taggedProductIdArr = req.body.productIds.map((product_id) => {
+          return {
+            tag_id: tag.id,
+            product_id
+          }
+        })
+      }
     })
 });
 
@@ -46,19 +53,40 @@ router.put('/:id', (req, res) => {
   // update a tag's name by its `id` value
   Tag.update(
     {
-      id: req.body.id,
+      //id: req.body.id,
       tag_name: req.body.tag_name,
     },
     {
       where: {
         id: req.params.id,
       },
-    }
-  )
-    .then((updatedTag) => {
-      res.status(200).json(updatedTag);
     })
-    .catch((err) => res.status(400).json({message: 'Unable to update tag!'}));
+    .then((tag) => {
+      return ProductTag.findAll({ where: { tag_id: req.params.id } });
+    })
+    .then((taggedProducts) => {
+      const taggedProductIds = taggedProducts.map(({ product_id }) => product_id);
+      const NewTaggedProducts = req.body.productIds
+        .filter((product_id) => !taggedProductIds.includes(product_id))
+        .map(({ product_id }) => {
+          return {
+            tag_id: req.params.id,
+            product_id,
+          };
+        });
+      const taggedProductsToRemove = taggedProducts
+        .filter(({ product_id }) => !req.body.productIds.includes(product_id))
+        .map(({ id }) => id);
+
+      return Promise.all([
+        ProductTag.destroy({ where: { id: taggedProductsToRemove } }),
+        ProductTag.bulkCreate(NewTaggedProducts),
+      ]);
+    })
+    .then((updatedTaggedProducts) => res.status(200).json(updatedTaggedProducts))
+    .catch((err) => {
+      res.status(400).json(err)
+    });
 });
 
 router.delete('/:id', (req, res) => {
